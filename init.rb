@@ -13,4 +13,11 @@ Redmine::Plugin.register :redmine_webhook do
   version '0.0.1'
   url 'https://github.com/suer/redmine_webhook'
   author_url 'http://d.hatena.ne.jp/suer'
+
+  require_dependency 'journal'
+  # Guards against including the module multiple time (like in tests)
+  # and registering multiple callbacks
+  unless Journal.included_modules.include? RedmineWebhook::JournalPatch
+    Journal.send(:include, RedmineWebhook::JournalPatch)
+  end
 end
