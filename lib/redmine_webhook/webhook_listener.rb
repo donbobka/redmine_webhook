@@ -1,43 +1,44 @@
 module RedmineWebhook
   class WebhookListener < Redmine::Hook::Listener
-
     def controller_issues_new_after_save(context = {})
       issue = context[:issue]
-      controller = context[:controller]
       project = issue.project
       webhook = Webhook.where(:project_id => project.project.id).first
       return unless webhook
-      post(webhook, issue_to_json(issue, controller))
+      post(webhook, issue_to_json(issue))
     end
 
-    def controller_issues_edit_after_save(context = {})
+    def model_redmine_webhook_journal_after_create(context = {})
       journal = context[:journal]
-      controller = context[:controller]
-      issue = context[:issue]
+      issue = journal.issue
       project = issue.project
       webhook = Webhook.where(:project_id => project.project.id).first
       return unless webhook
-      post(webhook, journal_to_json(issue, journal, controller))
+      post(webhook, journal_to_json(issue, journal))
     end
 
     private
-    def issue_to_json(issue, controller)
+    def issue_url(issue)
+      Rails.application.routes.url_helpers.issue_url(issue, Mailer.default_url_options)
+    end
+
+    def issue_to_json(issue)
       {
         :payload => {
           :action => 'opened',
           :issue => RedmineWebhook::IssueWrapper.new(issue).to_hash,
-          :url => controller.issue_url(issue)
+          :url => issue_url(issue)
         }
       }.to_json
     end
 
-    def journal_to_json(issue, journal, controller)
+    def journal_to_json(issue, journal)
       {
         :payload => {
           :action => 'updated',
           :issue => RedmineWebhook::IssueWrapper.new(issue).to_hash,
           :journal => RedmineWebhook::JournalWrapper.new(journal).to_hash,
-          :url => controller.issue_url(issue)
+          :url => issue_url(issue)
         }
       }.to_json
     end
